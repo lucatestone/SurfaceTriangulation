@@ -1,4 +1,4 @@
 # SurfaceTriangulation
-QGIS plugin that creates a surface triangulation from a raster file
+QGIS plugin useful for the triangulation of a surface from a dtm raster file
 
-I am developing this plugin for my thesis. Further news will come (soon?)
+I am developing this plugin for my Thesis. Further news will come (soon?)
