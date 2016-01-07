@@ -1,0 +1,43 @@
+# This file contains metadata for your plugin. Since 
+# version 2.0 of QGIS this is the proper way to supply 
+# information about a plugin. The old method of 
+# embedding metadata in __init__.py will 
+# is no longer supported since version 2.0.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=Surface Triangulation
+qgisMinimumVersion=2.08
+description=Plugin useful for the triangulation of a surface from both a dtm raster layer (.ASC is mandatory) or contour vector layer. If the input is a raster file the triangulation is built on the grid points, three output files are possible: .txt .stl (binary) .stl (ASCII). If the input is a vector file the triangulation is computed using a Delaunay algorithm, one output file is possible: .txt
+version=0.1
+author=Luca Testone
+email=lucatestone@gmail.com
+
+about=Input raster. It MUST be an .ASC file (with 6 lines header: ncols, nrows, xllcorner, yllcorner, cellsize, NODATA_value). If you have a raster of dirrefent format, convert it into .ASC (Arc/Info ASCII Grid) using QGIS conversion tool, being careful not to resize it. 
+Input vector.  The vector contour layer can be created using QGIS Extraction\Contour tool from any raster format (i.e. .ASC is not mandatory). 
+Output:	.txt file composed by two blocks: 1) the vertices of the triangulation, in the form #ID x y z 2) the triangles, represented as connections of three points, in the form #ID1 #ID2 #ID3
+	.stl ASCII file, see format specifications at www.fabbers.com/tech/STL_Format
+	.stl binary file, see format specifications at www.fabbers.com/tech/STL_Format
+
+tracker=https://github.com/lucatestone/SurfaceTriangulation
+repository=https://github.com/lucatestone/SurfaceTriangulation
+# End of mandatory metadata
+
+# Recommended items:
+
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=dem, dtm, triangulation, stl, mesh
+
+homepage=https://github.com/lucatestone/SurfaceTriangulation
+category=Plugins
+icon=icon.png
+# experimental flag
+experimental=True
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
