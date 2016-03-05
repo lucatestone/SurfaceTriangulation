@@ -34,7 +34,7 @@ import matplotlib
 import math
 import re
 import linecache
-
+import time
 import matplotlib.tri as mtri
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -87,6 +87,7 @@ class SurafaceTriangulation:
         self.dlg.rbTXT.clicked.connect(self.outputSwitch)
         self.dlg.rbSTLASCII.clicked.connect(self.outputSwitch)
         self.dlg.rbSTLbinary.clicked.connect(self.outputSwitch)
+        self.dlg.spinBox.setMaximum(100000)
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
         """Get the translation for a string using Qt translation API.
@@ -207,15 +208,15 @@ class SurafaceTriangulation:
 			
     def inputSwitch(self):
 		if self.dlg.rbVECTOR.isChecked():
-			self.dlg.rbSTLASCII.setDisabled(True)
-			self.dlg.rbSTLbinary.setDisabled(True)
-			self.dlg.rbTXT.setChecked(True)
+			#self.dlg.rbSTLASCII.setDisabled(True)
+			#self.dlg.rbSTLbinary.setDisabled(True)
+			#self.dlg.rbTXT.setChecked(True)
 			self.dlg.lineEdit.clear()
-			self.dlg.spinBox.setDisabled(True)
-		if self.dlg.rbASC.isChecked():
-			self.dlg.spinBox.setDisabled(False)
-			self.dlg.rbSTLASCII.setDisabled(False)
-			self.dlg.rbSTLbinary.setDisabled(False)
+			#self.dlg.spinBox.setDisabled(True)
+		#if self.dlg.rbASC.isChecked():
+			#self.dlg.spinBox.setDisabled(False)
+			#self.dlg.rbSTLASCII.setDisabled(False)
+			#self.dlg.rbSTLbinary.setDisabled(False)
     def outputSwitch(self):
         self.dlg.lineEdit.clear()
 		
@@ -241,65 +242,97 @@ class SurafaceTriangulation:
             if self.dlg.rbVECTOR.isChecked():
 				iter = selectedLayer.getFeatures()
 				myList=[]
+				##=======Reading feature 'ELEV' from vector contour layer=======##
 				for feature in iter:
-				# retrieve every feature with its geometry and attributes
 					entry=[]
 					entry.append(feature['ELEV'])
 					geom = feature.geometry()
 					entry.append(geom.asPolyline())
 					myList.append(entry)
 					
-				##Creazione furba dei vettori di punti dalla lista
-				x=np.empty(0)
-				y=np.empty(0)
+				##=======Fitting data into variables=======##
 				z=np.empty(0)
 				xy=np.empty([0,2])
-
+				n=self.dlg.spinBox.value()+1
 				for i in range(0,len(myList)):
-					xx=np.asarray(myList[i][1])[:,0]
-					yy=np.asarray(myList[i][1])[:,1]
-					xxyy=np.asarray(myList[i][1])
-					zz=np.empty(len(xx))
-					zz.fill(myList[i][0])
-					
-					x=np.hstack([x,xx])
-					y=np.hstack([y,yy])
+					index=0
+					L=range(0,len(myList[i][1]),n)
+					zz=np.zeros(len(L))
+					xxyy=np.zeros((len(L),2))
+					for j in L:
+						zz[index]=myList[i][0]
+						xxyy[index][0]=myList[i][1][j][0]
+						xxyy[index][1]=myList[i][1][j][1]
+						index+=1
+					#xx=np.asarray(myList[i][1])[:,0]
+					#yy=np.asarray(myList[i][1])[:,1]
+					#xxyy=np.asarray(myList[i][1])
+					#zz=np.empty(len(myList[i][1]))
+					#zz.fill(myList[i][0])
+					#x=np.hstack([x,xx])
+					#y=np.hstack([y,yy])
 					z=np.hstack([z,zz])
 					xy=np.vstack([xy,xxyy])
-
+				#Creating the scipy Spatial object
+				#xyz=np.zeros((len(z),3))
+				#xyz[:,0]=xy[:,0]
+				#xyz[:,1]=xy[:,1]
+				#xyz[:,2]=z
 				tess = scipy.spatial.Delaunay(xy)
-				# Create the matplotlib Triangulation object
-				x = tess.points[:, 0]
-				y = tess.points[:, 1]
-				xmin=x.min()
-				xmax=x.max()
-				ymin=y.min()
-				ymax=y.max()
-				tri = tess.vertices # or tess.simplices depending on scipy version
-				triang = mtri.Triangulation(x=xy[:, 0], y=xy[:, 1], triangles=tri)
-				
+				xmin=tess.points[:, 0].min()
+				ymin=tess.points[:, 1].min()
+				#To avoid large numbers
+				for i in range(0,len(tess.points)):
+					tess.points[i, 0]=tess.points[ i, 0]-xmin
+					tess.points[i, 1]=tess.points[i, 1]-ymin
+				x=tess.points[:,0]
+				y=tess.points[:,1]
+				#Creating the matplotlib Triangulation object
+				tri = tess.simplices # tess.vertices is deprecated
+				triang = mtri.Triangulation(x, y, triangles=tri)
+				##=======Eliminating excessively flat border triangles from the triangulation=======##
+				filteringMask=mtri.TriAnalyzer(triang).get_flat_tri_mask(min_circle_ratio=0.01, rescale=True)
+				triang.set_mask(filteringMask)
+				triangFiltered=triang.get_masked_triangles()
+				##triangFiltered is not a mtri object, but numpy.ndarray
+				##=======Writing TXT file=======##
+				if self.dlg.rbTXT.isChecked():
+					with open(filename, 'w') as myFile:
+						for i in range(0,len(x)):
+							##??Print only useful points??##
+							s="{0} {1:.2f} {2:.2f} {3:.2f}\n".format(i, x[i], y[i], z[i])
+							myFile.write(s)
+						for i in range(0,len(triangFiltered)):
+							myFile.write(np.array_str(triangFiltered[i]))
+							myFile.write("\n")
+						
+				##=======Writing STL file (Itasca)=======##
+				if self.dlg.rbSTLASCII.isChecked() or self.dlg.rbSTLbinary.isChecked():
+					data = np.zeros(len(triangFiltered), dtype=mesh.Mesh.dtype)
+					for i in range(0,len(triangFiltered)):
+						data['vectors'][i]=np.array([[x[triangFiltered[i][0]],y[triangFiltered[i][0]],z[triangFiltered[i][0]]],
+													 [x[triangFiltered[i][1]],y[triangFiltered[i][1]],z[triangFiltered[i][1]]],
+													 [x[triangFiltered[i][2]],y[triangFiltered[i][2]],z[triangFiltered[i][2]]]])
+					your_mesh = mesh.Mesh(data, remove_empty_areas=False)
+					your_mesh.normals
+					##!!!!!mode=1 forces to ASCII mode=2 BINARY mode = 0 AUTOMATIC!!!!!##
+					if self.dlg.rbSTLASCII.isChecked():
+						userChooses=1
+					elif self.dlg.rbSTLbinary.isChecked():
+						userChooses=2
+					your_mesh.save(filename,mode=userChooses)
 				##=======Plotting with matplotlib=======##
 				if self.dlg.checkBox.isChecked():
 					fig = plt.figure()
 					ax = fig.gca(projection='3d')
-					ax.plot_trisurf(triang, z, cmap=cm.jet, linewidth=0.05)
-					ax.view_init(elev=40., azim=45)
+					ax.plot_trisurf(triang, z, cmap=cm.Spectral, linewidth=0.05)
+					ax.view_init(elev=20, azim=45)
+					#TG
+					#elev=10 azim=120
+					#ROASCHIA
+					#elev=20, azim=45
 					plt.show()
-				
-				with open(filename, 'w') as myFile:
-					for i in range(0,len(x)):
-						myFile.write(str(i))
-						myFile.write(" ")
-						myFile.write(str(x[i]))
-						myFile.write(" ")
-						myFile.write(str(y[i]))
-						myFile.write(" ")
-						myFile.write(str(z[i]))
-						myFile.write("\n")
-						
-					for i in range(0,len(tri)):
-						myFile.write(np.array_str(tri[i]))
-						myFile.write("\n")
+					
 
 			##=======CASE ASC LAYER=======#
             elif self.dlg.rbASC.isChecked():
@@ -312,7 +345,8 @@ class SurafaceTriangulation:
 				yllcorner=float(re.findall("[-+]?\d+[\.]?\d*", linecache.getline(layerPath,4))[0])
 				cellsize=float(re.findall("[-+]?\d+[\.]?\d*", linecache.getline(layerPath,5))[0])
 				NODATA=float(re.findall("[-+]?\d+[\.]?\d*", linecache.getline(layerPath,6))[0])
-
+				##Properly matrix reshape: otherwise EST and WEST would be swapped
+				altitude=np.flipud(altitude)
 				##=======Initializing variables and reshaping data read before=======##
 				##Reading data every n cells
 				##e.g. n=2 
@@ -324,7 +358,7 @@ class SurafaceTriangulation:
 				##so n=readValue+1
 				n=self.dlg.spinBox.value()+1
 				if n>ncol-1 or n>nrow-1:
-					raise IOError, "cant read the grid, n must be lower"
+					raise IOError, "Cant read the grid, n must be lower"
 				numOfX=len(range(0,nrow,n))
 				numOfY=len(range(0,ncol,n))
 				##Creating arrays and reshaping needed read data into them
@@ -346,9 +380,24 @@ class SurafaceTriangulation:
 						
 				triangulationUp=np.zeros(((numOfY-1)*(numOfX-1),3),dtype=int)
 				triangulationLo=np.zeros(((numOfY-1)*(numOfX-1),3),dtype=int)
-				data = np.zeros(2*(numOfX-1)*(numOfY-1), dtype=mesh.Mesh.dtype)
 				
 				##=======Creating Triangulation for plot or txt file if specified=======##
+				#4 points of the grid determine a square divided into 2 triangles:
+				#	*---------------------------*
+				#	|**                         |
+				#	|  **                       |
+				#	|    *                      |
+				#	|     **                    |
+				#	|       **                  |
+				#	|         *         trUp    |
+				#	|          **               |
+				#	|            **             |
+				#	|              *            |
+				#	|               **          |
+				#	|     trLo        *         |
+				#	|                  **       |
+				#	|                    **     |
+				#	*---------------------------*
 				if self.dlg.rbTXT.isChecked() or self.dlg.checkBox.isChecked():
 					for j in range(0,numOfX-1):
 							for i in range(0,numOfY-1):
@@ -362,21 +411,24 @@ class SurafaceTriangulation:
 					with open(filename,'w') as myFile:
 						##POINTS	
 						for i in range(0,len(x)):
-							s="{0} {1} {2} {3} \n".format(i, x[i], y[i], altitudeResized[i])
+							s="{0} {1:.2f} {2:.2f} {3:.2f}\n".format(i, x[i], y[i], altitudeResized[i])
 							myFile.write(s)
 						##TRIANGLES
 						for i in range(0,np.shape(triangulationUp)[0]):
 							s="{0} {1} {2} \n{3} {4} {5}\n".format(triangulationUp[i][0],triangulationUp[i][1],triangulationUp[i][2],triangulationLo[i][0],triangulationLo[i][1],triangulationLo[i][2])
 							myFile.write(s)
 
-				##=======Writing STL file (Itasca) if specified=======##
+				##=======Writing STL file (Itasca)=======##
 				if self.dlg.rbSTLASCII.isChecked() or self.dlg.rbSTLbinary.isChecked():
+					data = np.zeros(2*(numOfX-1)*(numOfY-1), dtype=mesh.Mesh.dtype)
 					index=0
 					for j in range(0,numOfX-1):
 						for i in range(0,numOfY-1):
+							#Upper triangle of the cell (trUp)
 							data['vectors'][index]=np.array([[x[j*numOfY+i],y[j*numOfY+i],altitudeResized[j*numOfY+i]],
 															 [x[(j+1)*numOfY+i+1],y[(j+1)*numOfY+i+1],altitudeResized[(j+1)*numOfY+i+1]],
 															 [x[j*numOfY+i+1],y[j*numOfY+i+1],altitudeResized[j*numOfY+i+1]]])
+							#Lower triangle of the cell tr(Lo)
 							data['vectors'][(numOfY-1)*(numOfX-1)+index]=np.array([[x[j*numOfY+i],y[j*numOfY+i],altitudeResized[j*numOfY+i]],
 																				   [x[(j+1)*numOfY+i],y[(j+1)*numOfY+i],altitudeResized[(j+1)*numOfY+i]],
 																				   [x[(j+1)*numOfY+i+1],y[(j+1)*numOfY+i+1],altitudeResized[(j+1)*numOfY+i+1]]])
@@ -397,6 +449,10 @@ class SurafaceTriangulation:
 					triang = mtri.Triangulation(x, y, triangles=tri)
 					fig = plt.figure()
 					ax = fig.gca(projection='3d')
-					ax.plot_trisurf(triang, altitudeResized, cmap=cm.jet, linewidth=0.05)
-					ax.view_init(elev=40, azim=130)
+					ax.plot_trisurf(triang, altitudeResized, cmap=cm.Spectral, linewidth=0.05)
+					ax.view_init(elev=20, azim=45)
+					#TG
+					#elev=10 azim=115
+					#ROASCHIA
+					#elev=20, azim=45
 					plt.show()
