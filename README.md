@@ -26,7 +26,7 @@ LINUX (Ubuntu)
 
 1) Install the numpy-stl package; from terminal:
 
-pip install numpy-stl
+	pip install numpy-stl
 
 2) Copy the folder SurfaceTriangulation to your QGIS plugins folder (e.g./usr/share/qgis/python/plugins or in the 
 folder .qgis2/python/plugins in your home directory)
@@ -44,17 +44,17 @@ Right click=>Open path=>OSGeo4W Shell=>Run as administrator)
 3) From this shell set your path to the downloaded ez_setup.py file 
 (e.g. cd C:\Users\username\Downloads) and run it with the command:
 
-python ez_setup.py
+	python ez_setup.py
 
 4) Install pip with the command:
 
-easy_install pip
+	easy_install pip
 
 5) Install the numpy-stl package with the command:
 
-pip install numpy-stl
+	pip install numpy-stl
 
-	If you get an error in numpy compilation, just ignore it.
+If you get an error in numpy compilation, just ignore it.
 	
 6) Copy the folder SurfaceTriangulation to your QGIS plugins folder (e.g.
 C:\Users\username\.qgis2\python\plugins)
