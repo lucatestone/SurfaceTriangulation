@@ -38,7 +38,7 @@ folder .qgis2/python/plugins in your home directory)
 WINDOWS
 
 1) Download the file ez_setup.py from http://peak.telecommunity.com/dist/ez_setup.py
-and the numpy-stl package from https://pypi.python.org/pypi/numpy-stl (and extract the archive)
+and the numpy-stl package from https://pypi.python.org/pypi/numpy-stl (and extract the files from archive)
 
 2) Open an OSGeo4W Shell (under Start=>Qgis=>OSGeo4W Shell) with administration 
 priviledges (Right click=>Run as administrator or 
