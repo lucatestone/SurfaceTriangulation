@@ -17,10 +17,12 @@ If the input is a raster file, the triangulation is built on the grid points,
 If the input is a vector file, the triangulation is computed using a Delaunay
 algorithm.
 Three output files are possible:  .txt .stl (binary) .stl (ASCII).
+Some Windows machines do not support .stl (binary).
 
 HOW TO INSTALL
 
 This plugin relies on the numpy-stl package which must be installed by the user.
+If you want to use the 3d plot tool you need QGIS 64bit version.
 
 LINUX (Ubuntu)
 
@@ -36,6 +38,7 @@ folder .qgis2/python/plugins in your home directory)
 WINDOWS
 
 1) Download the file ez_setup.py from http://peak.telecommunity.com/dist/ez_setup.py
+and the numpy-stl package from https://pypi.python.org/pypi/numpy-stl (and extract the archive)
 
 2) Open an OSGeo4W Shell (under Start=>Qgis=>OSGeo4W Shell) with administration 
 priviledges (Right click=>Run as administrator or 
@@ -46,13 +49,11 @@ Right click=>Open path=>OSGeo4W Shell=>Run as administrator)
 
 	python ez_setup.py
 
-4) Install pip with the command:
-
-	easy_install pip
+4) Now set the path to the downloaded numpy-stl folder (e.g. cd C:\Users\username\Downloads\numpy-stl-1.8.0)
 
 5) Install the numpy-stl package with the command:
 
-	pip install numpy-stl
+	python setup.py install
 
 If you get an error in numpy compilation, just ignore it.
 	
